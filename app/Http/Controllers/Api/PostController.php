@@ -3,60 +3,48 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
-use App\Models\Post;
-use App\Models\Comment;
 use Illuminate\Http\Request;
-use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
+use App\Models\Post;
+use Illuminate\Support\Facades\Auth;
 
 class PostController extends Controller
 {
-    use AuthorizesRequests;
-
     public function index()
     {
-        return Post::with('user', 'comments')->get();
+        return Post::all();
     }
 
     public function store(Request $request)
     {
-        $request->validate([
+        $validated = $request->validate([
             'title' => 'required|string|max:255',
-            'body' => 'required|string',
+            'content' => 'required|string',
         ]);
 
         $post = Post::create([
-            'user_id' => auth()->id(),
-            'title' => $request->title,
-            'body' => $request->body,
+            'title' => $validated['title'],
+            'content' => $validated['content'],
+            'user_id' => Auth::id(),
         ]);
 
-        return response()->json($post, 201);
+        return redirect()->route('home')->with('status', 'Post created successfully');
     }
 
-    public function show(Post $post)
+    public function show($id)
     {
-        return $post->load('user', 'comments');
+        return Post::findOrFail($id);
     }
 
-    public function update(Request $request, Post $post)
+    public function destroy($id)
     {
-        $this->authorize('update', $post);
+        $post = Post::findOrFail($id);
 
-        $request->validate([
-            'title' => 'sometimes|string|max:255',
-            'body' => 'sometimes|string',
-        ]);
+        if ($post->user_id != Auth::id()) {
+            return response()->json(['message' => 'Unauthorized'], 403);
+        }
 
-        $post->update($request->only('title', 'body'));
-
-        return response()->json($post);
-    }
-
-    public function destroy(Post $post)
-    {
-        $this->authorize('delete', $post);
         $post->delete();
 
-        return response()->json(null, 204);
+        return redirect()->route('home')->with('status', 'Post deleted successfully');
     }
 }

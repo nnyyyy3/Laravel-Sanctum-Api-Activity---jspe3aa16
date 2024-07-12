@@ -3,48 +3,25 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
-use App\Models\Comment;
 use Illuminate\Http\Request;
-use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
+use App\Models\Comment;
+use Illuminate\Support\Facades\Auth;
 
 class CommentController extends Controller
 {
-    use AuthorizesRequests;
-
     public function store(Request $request)
     {
-        $request->validate([
+        $validated = $request->validate([
             'post_id' => 'required|exists:posts,id',
-            'body' => 'required|string',
+            'content' => 'required|string',
         ]);
 
         $comment = Comment::create([
-            'post_id' => $request->post_id,
-            'user_id' => auth()->id(),
-            'body' => $request->body,
+            'post_id' => $validated['post_id'],
+            'content' => $validated['content'],
+            'user_id' => Auth::id(),
         ]);
 
-        return response()->json($comment, 201);
-    }
-
-    public function update(Request $request, Comment $comment)
-    {
-        $this->authorize('update', $comment);
-
-        $request->validate([
-            'body' => 'sometimes|string',
-        ]);
-
-        $comment->update($request->only('body'));
-
-        return response()->json($comment);
-    }
-
-    public function destroy(Comment $comment)
-    {
-        $this->authorize('delete', $comment);
-        $comment->delete();
-
-        return response()->json(null, 204);
+        return redirect()->route('home')->with('status', 'Comment added successfully');
     }
 }
